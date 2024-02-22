@@ -1,3 +1,10 @@
 .env
+.env.save
+.env.dev
 vendor
 constant.php
+.htaccess
+database.sql
+node_modules
+*.map
+*.css

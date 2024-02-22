@@ -1,20 +1,28 @@
 <?php
 
+use App\Router;
+use Dotenv\Dotenv;
+use Whoops\Handler\PrettyPageHandler;
+use Whoops\Run;
+
 require_once '../vendor/autoload.php';
 require_once '../function.php';
 require_once '../constant.php';
 
-$router = new AltoRouter();
+$dotenv = Dotenv::createImmutable(__ROOT__);
+$dotenv->safeLoad();
 
-$router->addRoutes(array(
-    array('GET', '/blog', function() {
-        require VIEW_PATH . 'post' . SLASH . 'index.php';
-    }),
-    array('GET', '/blog/category', function() {
-        require VIEW_PATH . 'category' . SLASH . 'show.php';
-    })
-));
+$whoops = new Run();
+$whoops->pushHandler(new PrettyPageHandler);
+$whoops->register();
 
-$match = $router->match();
+$router = new Router(VIEW_PATH);
 
-call_user_func_array($match['target'], $match['params']);
+$router
+    ->get('/', 'home', 'Accueil')
+    ->get('/test', 'test')
+    ->get('/sign-in', 'auth' . SLASH . 'sign-in', 'Se connecter')
+    ->get('/sign-up', 'auth' . SLASH . 'sign-up', 'S\'inscrire')
+    ->get('/blog', 'post' . SLASH . 'index', 'Blog')
+    ->get('/blog/category', 'category' . SLASH . 'show', 'Catégorie')
+    ->run();
