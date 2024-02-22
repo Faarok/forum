@@ -8,3 +8,4 @@ database.sql
 node_modules
 *.map
 *.css
+test.*
