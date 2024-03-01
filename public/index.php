@@ -12,9 +12,12 @@ require_once '../constant.php';
 $dotenv = Dotenv::createImmutable(__ROOT__);
 $dotenv->safeLoad();
 
-$whoops = new Run();
-$whoops->pushHandler(new PrettyPageHandler);
-$whoops->register();
+if($_ENV['APP_DEBUG'] === 'true')
+{
+    $whoops = new Run();
+    $whoops->pushHandler(new PrettyPageHandler);
+    $whoops->register();
+}
 
 $router = new Router(VIEW_PATH);
 
