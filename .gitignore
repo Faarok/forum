@@ -1,11 +1,18 @@
+# .ENV
 .env
-.env.save
 .env.dev
+.env.save
+
+# COMPOSER
 vendor
-constant.php
-.htaccess
-database.sql
+
+# NPM
 node_modules
+
+# CSS
 *.map
 *.css
-test.*
+
+# SECURITY
+.htaccess
+constant.php

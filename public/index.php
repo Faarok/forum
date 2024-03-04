@@ -1,9 +1,10 @@
 <?php
 
+use App\User;
 use App\Router;
+use Whoops\Run;
 use Dotenv\Dotenv;
 use Whoops\Handler\PrettyPageHandler;
-use Whoops\Run;
 
 require_once '../vendor/autoload.php';
 require_once '../function.php';
