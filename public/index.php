@@ -10,7 +10,7 @@ require_once '../vendor/autoload.php';
 require_once '../function.php';
 require_once '../constant.php';
 
-$dotenv = Dotenv::createImmutable(__ROOT__);
+$dotenv = Dotenv::createImmutable(__ROOT__, file_exists(__ROOT__ . '.env.dev') ? '.env.dev' : '.env');
 $dotenv->safeLoad();
 
 if($_ENV['APP_DEBUG'] === 'true')
@@ -24,7 +24,6 @@ $router = new Router(VIEW_PATH);
 
 $router
     ->get('/', 'home', 'Accueil')
-    ->get('/test', 'test')
     ->get('/sign-in', 'auth' . SLASH . 'sign-in', 'Se connecter')
     ->get('/sign-up', 'auth' . SLASH . 'sign-up', 'S\'inscrire')
     ->get('/blog', 'post' . SLASH . 'index', 'Blog')

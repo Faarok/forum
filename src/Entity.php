@@ -15,6 +15,8 @@ class Entity
     private $db;
     private $query;
     private $results;
+    protected $instance;
+    private $parameters = array();
 
     protected $fieldsMapping = array(
         'text' => 'VARCHAR(255)',
@@ -43,7 +45,7 @@ class Entity
         }
         catch(EntityException $error)
         {
-            throw new EntityException($error->getMessage());
+            throw $error;
         }
     }
 
@@ -73,26 +75,69 @@ class Entity
         }
         catch(EntityException $error)
         {
-            throw new EntityException($error->getMessage());
+            throw $error;
         }
     }
 
-    public function select()
+    public function select(array $columns)
     {
         try
         {
             $class = get_called_class();
             $instance = new $class();
 
-            $instance->query = 'SELECT
-                    *
-                FROM ' . $instance->table
-            ;
+            $selectedColumns = array();
+            foreach($columns as $column)
+                $selectedColumns[] = trim($column);
+
+            $instance->query = 'SELECT ' . implode(', ', $selectedColumns) . ' FROM ' . $instance->table;
+
             return $instance;
         }
         catch(EntityException $error)
         {
-            throw new EntityException($error->getMessage());
+            throw $error;
+        }
+    }
+
+    public function where(string $column, string $condition, $value)
+    {
+        try
+        {
+            $validConditions = array(
+                '=' => '= ?',
+                '!=' => '!= ?',
+                '<>' => '<> ?',
+                '<' => '< ?',
+                '<=' => '<= ?',
+                '>' => '> ?',
+                '>=' => '>= ?',
+                'IN' => 'IN(?)',
+                'NOT IN' => 'NOT IN(?)'
+            );
+
+            if(!isset($validConditions[$condition]))
+                throw new EntityException('Invalid condition.');
+
+            // if(!str_contains($this->query, 'WHERE'))
+                $this->query .= ' WHERE ' . $column . ' ' . $validConditions[$condition];
+            // else
+                // $this->query .= PHP_EOL .
+
+            if(in_array($condition, ['IN', 'NOT IN']) && is_array($value))
+            {
+                $placeholders = implode(',', array_fill(0, count($value), '?'));
+                $this->parameters = array_merge($this->parameters, $value);
+                $this->query = str_replace('?', $placeholders, $this->query);
+            }
+            else
+                $this->parameters[] = $value;
+
+            return $this;
+        }
+        catch(EntityException $error)
+        {
+            throw $error;
         }
     }
 
@@ -103,14 +148,16 @@ class Entity
             $this->query .= ';';
             $this->results = $this->db->prepare($this->query);
 
-            $this->results->execute();
+            $this->results->execute($this->parameters);
 
             if($_ENV['APP_ENV'] === 'dev')
                 file_put_contents(__ROOT__ . 'sqldebug.sql', PHP_EOL . date('Y-m-d H:i:s') . ' | ' . $this->query . PHP_EOL, FILE_APPEND);
+
+            return $this->results;
         }
         catch(EntityException $error)
         {
-            throw new EntityException($error->getMessage());
+            throw $error;
         }
     }
 }
