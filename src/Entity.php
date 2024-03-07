@@ -148,12 +148,16 @@ class Entity
     {
         try
         {
+            if(substr($this->query, -1) === '(')
+                throw new PDOException('Impossible d\'appeler la méthode orWhere() au début d\'un whereSub()');
+
             $this->where($column, $condition, $value);
 
             if(!$lastPos = strrpos($this->query, 'AND'))
-                throw new EntityException('Erreur dans la requête : "AND" introuvable dans la méthode orWhere().');
+                throw new PDOException('Erreur dans la requête : "AND" introuvable dans la méthode orWhere().');
 
-            $this->query = substr_replace($this->query, 'OR', $lastPos, strlen('AND'));
+            if(strrpos($this->query, '(') < $lastPos)
+                $this->query = substr_replace($this->query, 'OR', $lastPos, strlen('AND'));
 
             return $this;
         }
