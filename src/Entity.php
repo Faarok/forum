@@ -3,6 +3,7 @@
 namespace App;
 
 use PDO;
+use PDOException;
 use App\Exception\EntityException;
 
 class Entity
@@ -32,6 +33,18 @@ class Entity
         'updator' => array('type' => 'text', 'label' => 'Modificateur')
     );
 
+    protected $validConditions = array(
+        '=' => '= ?',
+        '!=' => '!= ?',
+        '<>' => '<> ?',
+        '<' => '< ?',
+        '<=' => '<= ?',
+        '>' => '> ?',
+        '>=' => '>= ?',
+        'IN' => 'IN(?)',
+        'NOT IN' => 'NOT IN(?)'
+    );
+
     public function __construct()
     {
         $this->connect();
@@ -43,9 +56,9 @@ class Entity
         {
             $this->db = new PDO('mysql:dbname=' . $_ENV['DB_NAME'] . ';host=' . $_ENV['DB_HOST'], $_ENV['DB_USER'], $_ENV['DB_PASS']);
         }
-        catch(EntityException $error)
+        catch(PDOException $error)
         {
-            throw $error;
+            throw new EntityException($error->getMessage(), $error->getCode(), $error);
         }
     }
 
@@ -73,9 +86,9 @@ class Entity
             $instance->query .= PHP_EOL . ')';
             $instance->run();
         }
-        catch(EntityException $error)
+        catch(PDOException $error)
         {
-            throw $error;
+            throw new EntityException($error->getMessage(), $error->getCode(), $error);
         }
     }
 
@@ -90,13 +103,13 @@ class Entity
             foreach($columns as $column)
                 $selectedColumns[] = trim($column);
 
-            $instance->query = 'SELECT ' . implode(', ', $selectedColumns) . ' FROM ' . $instance->table;
+            $instance->query = 'SELECT ' . implode(', ', $selectedColumns) . PHP_EOL . 'FROM ' . $instance->table . PHP_EOL;
 
             return $instance;
         }
-        catch(EntityException $error)
+        catch(PDOException $error)
         {
-            throw $error;
+            throw new EntityException($error->getMessage(), $error->getCode(), $error);
         }
     }
 
@@ -104,27 +117,17 @@ class Entity
     {
         try
         {
-            $validConditions = array(
-                '=' => '= ?',
-                '!=' => '!= ?',
-                '<>' => '<> ?',
-                '<' => '< ?',
-                '<=' => '<= ?',
-                '>' => '> ?',
-                '>=' => '>= ?',
-                'IN' => 'IN(?)',
-                'NOT IN' => 'NOT IN(?)'
-            );
-
-            if(!isset($validConditions[$condition]))
+            if(!isset($this->validConditions[$condition]))
                 throw new EntityException('Invalid condition.');
 
-            // if(!str_contains($this->query, 'WHERE'))
-                $this->query .= ' WHERE ' . $column . ' ' . $validConditions[$condition];
-            // else
-                // $this->query .= PHP_EOL .
+            if(!str_contains($this->query, 'WHERE'))
+                $this->query .= 'WHERE ' . $column . ' ' . $this->validConditions[$condition];
+            elseif(substr($this->query, -1) === '(')
+                $this->query .= PHP_EOL . $column . ' ' . $this->validConditions[$condition];
+            else
+                $this->query .= PHP_EOL . 'AND ' . $column . ' ' . $this->validConditions[$condition];
 
-            if(in_array($condition, ['IN', 'NOT IN']) && is_array($value))
+            if(in_array($condition, array('IN', 'NOT IN')) && is_array($value))
             {
                 $placeholders = implode(',', array_fill(0, count($value), '?'));
                 $this->parameters = array_merge($this->parameters, $value);
@@ -135,10 +138,40 @@ class Entity
 
             return $this;
         }
-        catch(EntityException $error)
+        catch(PDOException $error)
         {
-            throw $error;
+            throw new EntityException($error->getMessage(), $error->getCode(), $error);
         }
+    }
+
+    public function orWhere(string $column, string $condition, $value)
+    {
+        try
+        {
+            $this->where($column, $condition, $value);
+
+            if(!$lastPos = strrpos($this->query, 'AND'))
+                throw new EntityException('Erreur dans la requête : "AND" introuvable dans la méthode orWhere().');
+
+            $this->query = substr_replace($this->query, 'OR', $lastPos, strlen('AND'));
+
+            return $this;
+        }
+        catch(PDOException $error)
+        {
+            throw new EntityException($error->getMessage(), $error->getCode(), $error);
+        }
+    }
+
+    public function whereSub(string $operator, callable $callback)
+    {
+        $this->query .= PHP_EOL . $operator . ' (';
+
+        $callback($this);
+
+        $this->query .= PHP_EOL . ')';
+
+        return $this;
     }
 
     public function run()
@@ -155,9 +188,9 @@ class Entity
 
             return $this->results;
         }
-        catch(EntityException $error)
+        catch(PDOException $error)
         {
-            throw $error;
+            throw new EntityException($error->getMessage(), $error->getCode(), $error);
         }
     }
 }
