@@ -13,7 +13,21 @@ dump($query
     ->whereSub('AND', function($query) {
         $query
             ->where('id', '=', 1)
-            ->orWhere('password', '=', 2)
+            ->orWhere('created_at', 'BETWEEN', array(
+                (new DateTime())->modify('-1 month')->format('Y-m-d'),
+                (new DateTime())->format('Y-m-d')
+            ))
+        ;
+    })
+    ->whereSub('AND', function($query) {
+        $query
+            ->where('mail', '=', 1)
+            ->whereSub('OR', function($query) {
+                $query
+                    ->where('id', '>', 3)
+                    ->orWhere('id', '!=', 4)
+                ;
+            })
         ;
     })
     ->run()

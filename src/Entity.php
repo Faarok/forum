@@ -42,7 +42,8 @@ class Entity
         '>' => '> ?',
         '>=' => '>= ?',
         'IN' => 'IN(?)',
-        'NOT IN' => 'NOT IN(?)'
+        'NOT IN' => 'NOT IN(?)',
+        'BETWEEN' => 'BETWEEN ? AND ?'
     );
 
     public function __construct()
@@ -56,9 +57,9 @@ class Entity
         {
             $this->db = new PDO('mysql:dbname=' . $_ENV['DB_NAME'] . ';host=' . $_ENV['DB_HOST'], $_ENV['DB_USER'], $_ENV['DB_PASS']);
         }
-        catch(PDOException $error)
+        catch(PDOException|EntityException $error)
         {
-            throw new EntityException($error->getMessage(), $error->getCode(), $error);
+            throw $error;
         }
     }
 
@@ -86,9 +87,9 @@ class Entity
             $instance->query .= PHP_EOL . ')';
             $instance->run();
         }
-        catch(PDOException $error)
+        catch(PDOException|EntityException $error)
         {
-            throw new EntityException($error->getMessage(), $error->getCode(), $error);
+            throw $error;
         }
     }
 
@@ -107,9 +108,9 @@ class Entity
 
             return $instance;
         }
-        catch(PDOException $error)
+        catch(PDOException|EntityException $error)
         {
-            throw new EntityException($error->getMessage(), $error->getCode(), $error);
+            throw $error;
         }
     }
 
@@ -133,14 +134,16 @@ class Entity
                 $this->parameters = array_merge($this->parameters, $value);
                 $this->query = str_replace('?', $placeholders, $this->query);
             }
+            elseif($condition === 'BETWEEN' && is_array($value))
+                $this->parameters = array_merge($this->parameters, $value);
             else
                 $this->parameters[] = $value;
 
             return $this;
         }
-        catch(PDOException $error)
+        catch(PDOException|EntityException $error)
         {
-            throw new EntityException($error->getMessage(), $error->getCode(), $error);
+            throw $error;
         }
     }
 
@@ -156,14 +159,17 @@ class Entity
             if(!$lastPos = strrpos($this->query, 'AND'))
                 throw new PDOException('Erreur dans la requête : "AND" introuvable dans la méthode orWhere().');
 
+            if(strrpos($this->query, 'BETWEEN') < $lastPos)
+                $lastPos = strrpos($this->query, 'AND', $lastPos - strlen($this->query) - 1);
+
             if(strrpos($this->query, '(') < $lastPos)
                 $this->query = substr_replace($this->query, 'OR', $lastPos, strlen('AND'));
 
             return $this;
         }
-        catch(PDOException $error)
+        catch(PDOException|EntityException $error)
         {
-            throw new EntityException($error->getMessage(), $error->getCode(), $error);
+            throw $error;
         }
     }
 
@@ -178,13 +184,46 @@ class Entity
         return $this;
     }
 
+    private function formatSqlQuery()
+    {
+        $formattedSql = '';
+        $tabCount = 0;
+        $lines = explode("\n", $this->query);
+
+        foreach($lines as $line)
+        {
+            $line = trim($line);
+            if(empty($line))
+                continue;
+
+            if(strpos($line, ')') !== false)
+            {
+                $tabCount--;
+
+                if($tabCount < 0)
+                    $tabCount = 0;
+            }
+
+            $formattedSql .= str_repeat("\t", $tabCount) . $line . "\n";
+
+            if(strpos($line, '(') !== false)
+                $tabCount++;
+        }
+
+        $this->query = $formattedSql;
+
+        return $this;
+    }
+
     public function run()
     {
         try
         {
+            if($_ENV['APP_ENV'] === 'dev')
+                $this->formatSqlQuery();
+
             $this->query .= ';';
             $this->results = $this->db->prepare($this->query);
-
             $this->results->execute($this->parameters);
 
             if($_ENV['APP_ENV'] === 'dev')
@@ -192,9 +231,9 @@ class Entity
 
             return $this->results;
         }
-        catch(PDOException $error)
+        catch(PDOException|EntityException $error)
         {
-            throw new EntityException($error->getMessage(), $error->getCode(), $error);
+            throw $error;
         }
     }
 }
