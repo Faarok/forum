@@ -152,12 +152,12 @@ class Entity
         try
         {
             if(substr($this->query, -1) === '(')
-                throw new PDOException('Impossible d\'appeler la méthode orWhere() au début d\'un whereSub()');
+                throw new EntityException('Impossible d\'appeler la méthode orWhere() au début d\'un whereSub()');
 
             $this->where($column, $condition, $value);
 
             if(!$lastPos = strrpos($this->query, 'AND'))
-                throw new PDOException('Erreur dans la requête : "AND" introuvable dans la méthode orWhere().');
+                throw new EntityException('Erreur dans la requête : "AND" introuvable dans la méthode orWhere().');
 
             if(strrpos($this->query, 'BETWEEN') < $lastPos)
                 $lastPos = strrpos($this->query, 'AND', $lastPos - strlen($this->query) - 1);
@@ -184,6 +184,33 @@ class Entity
         return $this;
     }
 
+    public function groupBy(array $columns)
+    {
+        try
+        {
+            if(empty($columns))
+                throw new EntityException('Impossible d\'utiliser une clause GROUP BY sans indiquer de colonne.');
+
+            $this->query .= PHP_EOL . 'GROUP BY ' . implode(',', $columns);
+
+            return $this;
+        }
+        catch(PDOException|EntityException $error)
+        {
+            throw $error;
+        }
+    }
+
+    public function order(array $order)
+    {
+        // $this->uery .= PHP_EOL .
+    }
+
+    public function limit()
+    {
+
+    }
+
     private function formatSqlQuery()
     {
         $formattedSql = '';
@@ -208,6 +235,14 @@ class Entity
 
             if(strpos($line, '(') !== false)
                 $tabCount++;
+
+            if(strpos($line, ')') !== false)
+            {
+                $tabCount--;
+
+                if($tabCount < 0)
+                    $tabCount = 0;
+            }
         }
 
         $this->query = $formattedSql;
@@ -235,5 +270,11 @@ class Entity
         {
             throw $error;
         }
+    }
+
+    // Add your additional methods !
+    public function loadAll(array $selectedColumns, array $where, array $limit, array $order)
+    {
+
     }
 }

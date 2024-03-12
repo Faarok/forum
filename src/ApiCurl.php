@@ -1,7 +1,13 @@
 <?php
 
+namespace App;
+
+use Exception;
+use CurlHandle;
+use App\Exception\ApiException;
+
 /**
- * Class légère permettant d'initialiser libcurl.
+ * Class légère pour utiliser cURL
  *
  * @author Svein Samson <samson.svein@gmail.com>
  */
@@ -37,21 +43,109 @@ class ApiCurl
     protected function curlInit():CurlHandle
     {
         $this->api = curl_init($this->url);
-        curl_setopt_array($this->api, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 1
-        ]);
+        $this->setOption(CURLOPT_RETURNTRANSFER, true);
 
         return $this->api;
+    }
+
+    public function setOption(int $option, mixed $value)
+    {
+        try
+        {
+            if(empty($option) || empty($value) && $value !== false)
+                throw new ApiException('setOption : Option ou valeur vide', 400);
+
+            if(!curl_setopt($this->api, $option, $value))
+                throw new ApiException('L\'option n\'a pas pu être configurée. Vérifiez si elle est disponible ici : https://www.php.net/manual/en/function.curl-setopt.php');
+
+            return $this->api;
+        }
+        catch(Exception|ApiException $error)
+        {
+            $this->api->close();
+            throw $error;
+        }
+    }
+
+    public function setOptions(array $options)
+    {
+        try
+        {
+            if(empty($options))
+                throw new ApiException('setOptions : Aucuns options trouvées.', 400);
+
+            foreach($options as $key => $value)
+                $this->setOption($key, $value);
+
+            return $this->api;
+        }
+        catch(ApiException $error)
+        {
+            $this->api->close();
+            throw $error;
+        }
+    }
+
+    public function setHeaderOutput(bool $value)
+    {
+        try
+        {
+            $this->api->setOption(CURLOPT_HEADER, $value);
+
+            return $this->api;
+        }
+        catch(Exception|ApiException $error)
+        {
+            throw $error;
+        }
+    }
+
+    public function setCustomRequest(string $method)
+    {
+        try
+        {
+            $this->api->setOption(CURLOPT_CUSTOMREQUEST, $method);
+
+            return $this->api;
+        }
+        catch(Exception|ApiException $error)
+        {
+            throw $error;
+        }
+    }
+
+    public function setPostFields(array $post)
+    {
+        try
+        {
+            $this->api->setOption(CURLOPT_POSTFIELDS, json_encode($post));
+
+            return $this->api;
+        }
+        catch(Exception|ApiException $error)
+        {
+            throw $error;
+        }
+    }
+
+    public function setHeader(array $header)
+    {
+        try
+        {
+            $this->api->setOption(CURLOPT_HEADER, $header);
+
+            return $this->api;
+        }
+        catch(Exception|ApiException $error)
+        {
+            throw $error;
+        }
     }
 
     /**
      * exec
      * Exécute libcurl à partir de la variable $this->api récupérer lors de l'initialisation de libcurl.
      *
-     * @param  mixed $fields
-     *
-     * @param $fields
      * @throws Exception L'API en paramètre est vide
      * @throws Exception L'exécution a renvoyé false
      * @throws Exception L'exécution a renvoyé une erreur HTTP 401
@@ -78,7 +172,7 @@ class ApiCurl
                 if($code === 401)
                 {
                     $data = json_decode($data, true);
-                    throw new Exception($data['message'], 401);
+                    throw new Exception($data['errors']['message'], $data['errors']['code']);
                 }
                 throw new Exception($data, $code);
             }
