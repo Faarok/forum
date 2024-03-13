@@ -36,10 +36,54 @@ $title = 'Mon blog';
 //     // ->fetchAll(PDO::FETCH_ASSOC)
 // );
 
-$cluster = '5f0a74338ed94d809fdac53ef72049b0';
-$apiKey = 'da76abaa5c7a2cf1b756f5e4ed5fef92fea5badf';
-$runId = '1de2a46091534734ad4ca0815c09a287';
+$crawler = 'e625ce52e98a6d4d1b53ef36dff7dacb';
+$apiKey = '38a1db67f8a3ff748f8376d14c07c1a852235981';
 
+
+// Create cluster
+$api = new ApiCurl('https://api.lobstr.io/v1/clusters/save');
+
+$api
+    ->setHeaderOutput(false)
+    ->setHeader(array(
+        'Content-Type: application/json',
+        'Authorization: Token ' . $apiKey
+    ))
+    ->setPostFields(array(
+        'crawler' => $crawler
+    ))
+;
+
+$cluster = $api->exec()['id'];
+
+// Setting cluster
+$api = new ApiCurl('https://api.lobstr.io/v1/clusters/' . $cluster);
+
+$api
+    ->setHeaderOutput(false)
+    ->setHeader(array(
+        'Content-Type: application/json',
+        'Authorization: Token ' . $apiKey
+    ))
+    ->setPostFields(array(
+        'name' => 'Vision Google Reviews',
+        'concurrency' => 1,
+        'export_unique_results' => true,
+        'no_line_breaks' => true,
+        'to_complete' => false,
+        'params' => array(
+            'language' => 'Français (France)',
+            'max_results' => 500,
+            'sort_by' => 'newest'
+        ),
+        'accounts' => null,
+        'run_notify' => 'on_success'
+    ))
+;
+
+$api->exec();
+
+// Add tasks
 $agencies = array(
     'https://www.google.com/maps/place/Cabinet+Bedin+Immobilier+(M%C3%A9rignac)/@44.8415023,-0.6459224,17z/data=!3m1!4b1!4m6!3m5!1s0xd54d9d19f407bad:0x7f2ee6ca13e66d76!8m2!3d44.8415023!4d-0.6459224!16s%2Fg%2F1tnpgs1h?entry=ttu',
     'https://www.google.com/maps/place/Cabinet+Bedin+Immobilier+(Pessac)/@44.8058666,-0.6369288,17z/data=!3m1!4b1!4m6!3m5!1s0xd54d8fa33ddfadb:0x39e7334d9ddb8f2e!8m2!3d44.8058629!4d-0.6320579!16s%2Fg%2F1tdkt3lp?entry=ttu'
@@ -49,30 +93,64 @@ $tasks = array();
 foreach($agencies as $agency)
     $tasks[] = array('url' => $agency);
 
-$api = new ApiCurl('https://api.lobstr.io/v1/results');
+$api = new ApiCurl('https://api.lobstr.io/v1/tasks');
 
-$postJson = array(
-    'run' => '1de2a46091534734ad4ca0815c09a287',
-    'page_size' => 500
-);
-
-// CURLOPT_POST => true,
-$curlOptions = array(
-    CURLOPT_HEADER => false,
-    CURLOPT_CUSTOMREQUEST => 'GET',
-    CURLOPT_POSTFIELDS => json_encode($postJson),
-    CURLOPT_HTTPHEADER => array(
+$api
+    ->setHeaderOutput(false)
+    ->setHeader(array(
         'Content-Type: application/json',
-        'Authorization: Token ' . $apiKey,
-    )
-);
+        'Authorization: Token ' . $apiKey
+    ))
+    ->setPostFields(array(
+        'cluster' => $cluster,
+        'tasks' => $tasks
+    ))
+;
 
-$api->setOptions($curlOptions);
+// Get tasks ID
 $apiResponse = $api->exec();
 
-$datas = array();
+$tasksId = array();
+foreach($apiResponse['tasks'] as $data)
+    $tasksId = $data['id'];
 
-dump($apiResponse);
+
+// Launch run
+$api = new ApiCurl('https://api.lobstr.io/v1/runs');
+
+$api
+    ->setHeaderOutput(false)
+    ->setHeader(array(
+        'Content-Type: application/json',
+        'Authorization: Token ' . $apiKey
+    ))
+    ->setPostFields(array(
+        'cluster' => $cluster
+    ))
+;
+
+$runId = $api->exec()['id']; // à echo + à ajouter à $_ sur Vision lors du CRON
+
+// Get results
+$api = new ApiCurl('https://api.lobstr.io/v1/results');
+
+$api
+    ->setHeaderOutput(false)
+    ->setCustomRequest('GET')
+    ->setPostFields(array(
+        'run' => $runId,
+        'page' => 1,
+        'page_size' => 100000
+    ))
+    ->setHeader(array(
+        'Content-Type: application/json',
+        'Authorization: Token ' . $apiKey,
+    ))
+;
+
+$apiResponse = $api->exec();
+
+dd($apiResponse);
 
 ?>
 

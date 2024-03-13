@@ -22,17 +22,24 @@ class ApiCurl
      *
      * @param  string $url
      *
-     * @throws Exception L'URL définie est vide
+     * @throws ApiException L'URL définie est vide
      */
     public function __construct(string $url)
     {
-        if(!empty($url))
+        try
         {
-            $this->url = $url;
-            self::curlInit();
+            if(!empty($url))
+            {
+                $this->url = $url;
+                self::curlInit();
+            }
+            else
+                throw new ApiException('URL vide');
         }
-        else
-            throw new Exception('Undefined URL');
+        catch(Exception|ApiException $error)
+        {
+            throw $error;
+        }
     }
 
     /**
@@ -40,12 +47,12 @@ class ApiCurl
      *
      * @return CurlHandle
      */
-    protected function curlInit():CurlHandle
+    protected function curlInit()
     {
         $this->api = curl_init($this->url);
         $this->setOption(CURLOPT_RETURNTRANSFER, true);
 
-        return $this->api;
+        return $this;
     }
 
     public function setOption(int $option, mixed $value)
@@ -58,7 +65,7 @@ class ApiCurl
             if(!curl_setopt($this->api, $option, $value))
                 throw new ApiException('L\'option n\'a pas pu être configurée. Vérifiez si elle est disponible ici : https://www.php.net/manual/en/function.curl-setopt.php');
 
-            return $this->api;
+            return $this;
         }
         catch(Exception|ApiException $error)
         {
@@ -77,7 +84,7 @@ class ApiCurl
             foreach($options as $key => $value)
                 $this->setOption($key, $value);
 
-            return $this->api;
+            return $this;
         }
         catch(ApiException $error)
         {
@@ -90,9 +97,9 @@ class ApiCurl
     {
         try
         {
-            $this->api->setOption(CURLOPT_HEADER, $value);
+            $this->setOption(CURLOPT_HEADER, $value);
 
-            return $this->api;
+            return $this;
         }
         catch(Exception|ApiException $error)
         {
@@ -104,9 +111,9 @@ class ApiCurl
     {
         try
         {
-            $this->api->setOption(CURLOPT_CUSTOMREQUEST, $method);
+            $this->setOption(CURLOPT_CUSTOMREQUEST, $method);
 
-            return $this->api;
+            return $this;
         }
         catch(Exception|ApiException $error)
         {
@@ -118,9 +125,9 @@ class ApiCurl
     {
         try
         {
-            $this->api->setOption(CURLOPT_POSTFIELDS, json_encode($post));
+            $this->setOption(CURLOPT_POSTFIELDS, json_encode($post));
 
-            return $this->api;
+            return $this;
         }
         catch(Exception|ApiException $error)
         {
@@ -132,9 +139,9 @@ class ApiCurl
     {
         try
         {
-            $this->api->setOption(CURLOPT_HEADER, $header);
+            $this->setOption(CURLOPT_HTTPHEADER, $header);
 
-            return $this->api;
+            return $this;
         }
         catch(Exception|ApiException $error)
         {
@@ -166,18 +173,25 @@ class ApiCurl
             }
 
             $code = curl_getinfo($this->api, CURLINFO_HTTP_CODE);
-            if($code !== 200)
+
+            switch($code)
             {
-                curl_close($this->api);
-                if($code === 401)
-                {
+                case 200:
+                    return json_decode($data, true);
+                    break;
+                case 201:
+                    return json_decode($data, true);
+                    break;
+                case 401:
                     $data = json_decode($data, true);
                     throw new Exception($data['errors']['message'], $data['errors']['code']);
-                }
-                throw new Exception($data, $code);
+                    break;
+                default:
+                    throw new Exception($data, $code);
+                    break;
             }
 
-            return json_decode($data, true);
+            curl_close($this->api);
         }
         throw new Exception("CURL IS EMPTY");
     }
