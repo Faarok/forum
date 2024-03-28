@@ -191,7 +191,7 @@ class Entity
             if(empty($columns))
                 throw new EntityException('Impossible d\'utiliser une clause GROUP BY sans indiquer de colonne.');
 
-            $this->query .= PHP_EOL . 'GROUP BY ' . implode(',', $columns);
+            $this->query .= PHP_EOL . 'GROUP BY ' . implode(', ', $columns);
 
             return $this;
         }
@@ -201,14 +201,49 @@ class Entity
         }
     }
 
-    public function order(array $order)
+    public function orderBy(array $columnsToOrder)
     {
-        // $this->uery .= PHP_EOL .
+        try
+        {
+            $this->query .= PHP_EOL . 'ORDER BY ';
+
+            $concatenate = array();
+            foreach($columnsToOrder as $column => $order)
+            {
+                $order = strtoupper($order);
+                if(empty($order))
+                    $concatenate[] = $column . ' ASC';
+                elseif($order != 'DESC' && $order != 'ASC')
+                    throw new EntityException('Seuls les valeurs ASC et DESC sont acceptés dans la clause ORDER BY.');
+                else
+                    $concatenate[] = $column . ' ' . $order;
+            }
+
+            $this->query .= implode(', ', $concatenate);
+
+            return $this;
+        }
+        catch(PDOException|EntityException $error)
+        {
+            throw $error;
+        }
     }
 
-    public function limit()
+    public function limit(int $limit)
     {
+        try
+        {
+            if(empty($limit))
+                throw new EntityException('La limite ne peut être nulle.');
 
+            $this->query .= PHP_EOL . 'LIMIT ' . $limit;
+
+            return $this;
+        }
+        catch(PDOException|EntityException $error)
+        {
+            throw $error;
+        }
     }
 
     private function formatSqlQuery()
