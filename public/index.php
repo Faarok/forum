@@ -13,6 +13,10 @@ require_once '../constant.php';
 $dotenv = Dotenv::createImmutable(__ROOT__, file_exists(__ROOT__ . '.env.dev') ? '.env.dev' : '.env');
 $dotenv->safeLoad();
 
+// Configuration SMTP
+ini_set('SMTP', $_ENV['SMTP_HOST']);
+ini_set('smtp_port', $_ENV['SMTP_PORT']);
+
 if($_ENV['APP_DEBUG'] === 'true')
 {
     $whoops = new Run();
@@ -20,12 +24,13 @@ if($_ENV['APP_DEBUG'] === 'true')
     $whoops->register();
 }
 
-$router = new Router(VIEW_PATH);
+$router = new Router();
 
 $router
-    ->get('/', 'home', 'Accueil')
-    ->get('/sign-in', 'auth' . SLASH . 'sign-in', 'Se connecter')
-    ->get('/sign-up', 'auth' . SLASH . 'sign-up', 'S\'inscrire')
-    ->get('/blog', 'post' . SLASH . 'index', 'Blog')
-    ->get('/blog/category', 'category' . SLASH . 'show', 'Catégorie')
+    ->get('/migration', __ROOT__ . 'migration' . SLASH . 'migration', 'Migration')
+    ->get('/', VIEW_PATH . 'home', 'Accueil')
+    ->get('/sign-in', VIEW_PATH . 'auth' . SLASH . 'sign-in', 'Se connecter')
+    ->get('/sign-up', VIEW_PATH . 'auth' . SLASH . 'sign-up', 'S\'inscrire')
+    ->get('/blog', VIEW_PATH . 'post' . SLASH . 'index', 'Blog')
+    ->get('/blog/category', VIEW_PATH . 'category' . SLASH . 'show', 'Catégorie')
     ->run();

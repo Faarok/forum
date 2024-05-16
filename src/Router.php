@@ -8,25 +8,17 @@ class Router
 {
 
     /**
-     * @var string
-     */
-    private $viewPath;
-
-    /**
      * @var AltoRouter
      */
     private $router;
 
-    public function __construct(string $viewPath)
+    public function __construct()
     {
-
-        $this->viewPath = $viewPath;
         $this->router = new AltoRouter();
     }
 
     public function get(string $url, string $view, ?string $name = null)
     {
-        // $this->router->map('GET', $url, fn() => require_once($this->viewPath . str_replace(array('/', '\\'), SLASH, $template) . '.php'), $name);
         $this->router->map('GET', $url, $view, $name);
         return $this;
     }
@@ -34,11 +26,24 @@ class Router
     public function run(): self
     {
         $match = $this->router->match();
+
+        // Vérifie si $match['target'] est false (aucune route trouvée)
+        if($match === false)
+        {
+            // Afficher une erreur 404
+            http_response_code(404);
+            ob_start();
+            require(__ROOT__ . 'error.php');
+            $content = ob_get_clean();
+            require VIEW_PATH . 'layouts' . SLASH . 'default.php';
+            return $this;
+        }
+
         $view = $match['target'];
         ob_start();
-        require $this->viewPath . $view . '.php';
+        require $view . '.php';
         $content = ob_get_clean();
-        require $this->viewPath . SLASH . 'layouts' . SLASH . 'default.php';
+        require VIEW_PATH . 'layouts' . SLASH . 'default.php';
 
         return $this;
     }

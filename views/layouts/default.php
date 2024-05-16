@@ -1,3 +1,9 @@
+<?php
+
+require_once(__ROOT__ . 'function.php');
+
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
