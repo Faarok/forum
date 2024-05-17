@@ -2,7 +2,8 @@
 
 namespace App;
 
-use App\Exception\UserException;
+use Core\Entity;
+use Core\Exception\UserException;
 
 class User extends Entity
 {
@@ -31,7 +32,6 @@ class User extends Entity
             throw new UserException('Les deux mots de passe ne sont pas identiques');
 
         $user = new User();
-        $user->id = 3;
         $user->username = $username;
         $user->mail = $mail;
         $user->password = password_hash($password, PASSWORD_DEFAULT);

@@ -12,6 +12,7 @@ node_modules
 # CSS
 *.map
 *.css
+!migration/migration.css
 
 # SECURITY
 .htaccess

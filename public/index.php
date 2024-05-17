@@ -1,7 +1,7 @@
 <?php
 
 use App\User;
-use App\Router;
+use Core\Router;
 use Whoops\Run;
 use Dotenv\Dotenv;
 use Whoops\Handler\PrettyPageHandler;

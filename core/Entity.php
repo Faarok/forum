@@ -1,10 +1,11 @@
 <?php
 
-namespace App;
+namespace Core;
 
 use PDO;
 use PDOException;
-use App\Exception\EntityException;
+use Core\Exception\EntityException;
+use PDOStatement;
 
 /**
  * @property array $columns
@@ -72,7 +73,7 @@ class Entity
             $class = get_called_class();
             $instance = new $class();
 
-            $instance->query = "CREATE TABLE `{$_ENV['DB_NAME']}`.`{$instance->table}` (
+            $instance->query = "CREATE TABLE `{$_ENV['DB_NAME']}`.`{$instance::tableName()}` (
                 `id` INT PRIMARY KEY AUTO_INCREMENT,
             ";
 
@@ -114,16 +115,18 @@ class Entity
             foreach ($this->parameters as &$param)
                 $param = htmlspecialchars($param, ENT_QUOTES, 'UTF-8');
 
-            if($_ENV['APP_ENV'] === 'dev')
-                $this->formatSqlQuery();
-
             $this->query .= ';';
             $this->results = $this->db->prepare($this->query);
             $this->results->execute($this->parameters);
             $this->results->setFetchMode(PDO::FETCH_ASSOC);
 
             if($_ENV['APP_ENV'] === 'dev')
-                file_put_contents(__ROOT__ . 'sqldebug.sql', PHP_EOL . date('Y-m-d H:i:s') . ' | ' . $this->query . PHP_EOL, FILE_APPEND);
+            {
+                $this->formatSqlQuery();
+                $debugQuery = $this->debugSqlQuery();
+
+                file_put_contents(__ROOT__ . 'sqldebug.sql', date('Y-m-d H:i:s') . " | {$debugQuery}\n", FILE_APPEND);
+            }
 
             return $this->results;
         }
@@ -172,18 +175,29 @@ class Entity
         return $this;
     }
 
+    private function debugSqlQuery():string
+    {
+        $explodedQuery = explode('?', $this->query);
+        $debugQuery = '';
+
+        foreach($explodedQuery as $key => $value)
+        {
+            $debugQuery .= $value;
+            if(isset($this->parameters[$key]))
+                $debugQuery .= $this->parameters[$key];
+        }
+
+        return $debugQuery;
+    }
+
     protected function save()
     {
         try
         {
             if(!empty($this->id) && $this->id > 0)
-            {
                 $this->update();
-            }
             else
-            {
                 $this->create();
-            }
         }
         catch (PDOException $error)
         {
@@ -197,11 +211,16 @@ class Entity
         {
             $columns = $this->getColumns();
 
-            $this->query = 'INSERT INTO ' . $this::tableName() . ' (';
+            $this->created_at = $this->updated_at = getCurrentDateHour();
+            $this->state = $this::ACTIVE;
+            $this->query = "INSERT INTO {$this::tableName()} (";
 
             $lastKey = array_key_last($columns);
             foreach(array_keys($columns) as $key)
             {
+                if($key === 'id')
+                    continue;
+
                 if($key !== $lastKey)
                     $this->query .= $key . ', ';
                 else
@@ -212,7 +231,10 @@ class Entity
 
             foreach(array_keys($columns) as $key)
             {
-                $this->parameters[] = htmlspecialchars($this->$key, ENT_QUOTES, 'UTF-8');
+                if($key === 'id')
+                    continue;
+
+                $this->parameters[] = $this->$key;
 
                 if($key !== $lastKey)
                     $this->query .= '?, ';
@@ -234,6 +256,8 @@ class Entity
         try
         {
             $columns = $this->getColumns();
+
+            $this->updated_at = getCurrentDateHour();
             $this->query = "UPDATE {$this::tableName()} SET ";
 
             foreach(array_keys($columns) as $key)
@@ -241,7 +265,7 @@ class Entity
                 if($key === 'id')
                     continue;
 
-                $this->parameters[] = htmlspecialchars($this->$key, ENT_QUOTES, 'UTF-8');
+                $this->parameters[] = $this->$key;
 
                 if($key !== array_key_last($columns))
                     $this->query .= "{$key} = ?, ";
@@ -258,79 +282,208 @@ class Entity
         }
     }
 
-    // public function select(array $columns)
-    // {
-    //     try
-    //     {
-    //         $class = get_called_class();
-    //         $instance = new $class();
+    protected function hardDelete()
+    {
+        try
+        {
+            if(empty($this->id) || $this->id == 0)
+                throw new EntityException('Erreur lors de la suppression complète de la donnée : ID non spécifié');
 
-    //         $selectedColumns = array();
-    //         foreach($columns as $column)
-    //             $selectedColumns[] = trim($column);
+            $this->query = "DELETE FROM {$this::tableName()} WHERE id = {$this->id}";
+            $this->run();
+        }
+        catch(PDOException $error)
+        {
+            throw new EntityException('Erreur lors de la suppression complète de la donnée : ' . $error->getMessage());
+        }
+    }
 
-    //         $instance->query = 'SELECT ' . implode(', ', $selectedColumns) . PHP_EOL . 'FROM ' . $instance->table . PHP_EOL;
+    protected function delete()
+    {
+        try
+        {
+            if(empty($this->id) || $this->id == 0)
+                throw new EntityException('Erreur lors de la suppression de la donnée : ID non spécifié');
 
-    //         return $instance;
-    //     }
-    //     catch(PDOException|EntityException $error)
-    //     {
-    //         throw $error;
-    //     }
-    // }
+            $this->state = $this::INACTIVE;
+            $this->save();
+        }
+        catch(PDOException $error)
+        {
+            throw new EntityException('Erreur lors de la suppression de la donnée : ' . $error->getMessage());
+        }
+    }
 
-    // public function where(string $column, string $condition, $value)
-    // {
-    //     $validConditions = array(
-    //         '=' => '= ?',
-    //         '!=' => '!= ?',
-    //         '<>' => '<> ?',
-    //         '<' => '< ?',
-    //         '<=' => '<= ?',
-    //         '>' => '> ?',
-    //         '>=' => '>= ?',
-    //         'IN' => 'IN(?)',
-    //         'NOT IN' => 'NOT IN(?)',
-    //         'BETWEEN' => 'BETWEEN ? AND ?'
-    //     );
+    protected function archive()
+    {
+        try
+        {
+            if(empty($this->id) || $this->id == 0)
+                throw new EntityException('Erreur lors de l\'archivage de la donnée : ID non spécifié');
 
-    //     try
-    //     {
-    //         if(!isset($validConditions[$condition]))
-    //             throw new EntityException('Invalid condition.');
+            $this->state = $this::ARCHIVED;
+            $this->save();
+        }
+        catch(PDOException $error)
+        {
+            throw new EntityException('Erreur lors de l\'archivage de la donnée : ' . $error->getMessage());
+        }
+    }
 
-    //         if(!str_contains($this->query, 'WHERE'))
-    //             $this->query .= 'WHERE ' . $column . ' ' . $validConditions[$condition];
-    //         elseif(substr($this->query, -1) === '(')
-    //             $this->query .= PHP_EOL . $column . ' ' . $validConditions[$condition];
-    //         else
-    //             $this->query .= PHP_EOL . 'AND ' . $column . ' ' . $validConditions[$condition];
+    public static function getById(int|string $id)
+    {
+        try
+        {
+            $class = get_called_class(); // Récupère le nom de la classe appelée
+            $instance = new $class(); // Instancie la classe appelée
 
-    //         if(in_array($condition, array('IN', 'NOT IN')) && is_array($value))
-    //         {
-    //             $placeholders = implode(',', array_fill(0, count($value), '?'));
-    //             $this->parameters = array_merge($this->parameters, $value);
-    //             $this->query = str_replace('?', $placeholders, $this->query);
-    //         }
-    //         elseif($condition === 'BETWEEN' && is_array($value))
-    //             $this->parameters = array_merge($this->parameters, $value);
-    //         else
-    //             $this->parameters[] = $value;
+            // Exécution de la requête
+            $pdoStatement = $instance
+                ->select()
+                ->where('id', '=', $id)
+                ->run()
+            ;
 
-    //         return $this;
-    //     }
-    //     catch(PDOException|EntityException $error)
-    //     {
-    //         throw $error;
-    //     }
-    // }
+            return $class::load($pdoStatement);
+        }
+        catch (PDOException $error)
+        {
+            throw new EntityException('Erreur lors de la récupération par ID : ' . $error->getMessage());
+        }
+    }
+
+    public function select(array $columns = array())
+    {
+        try
+        {
+            $class = get_called_class();
+            $instance = new $class();
+
+            if(!empty($columns))
+            {
+                $selectedColumns = array();
+                foreach($columns as $column)
+                    $selectedColumns[] = trim($column);
+
+                $instance->query = 'SELECT ' . implode(', ', $selectedColumns) . PHP_EOL . 'FROM ' . $instance->table . PHP_EOL;
+            }
+            else
+                $instance->query = "SELECT * FROM {$instance->table}" . PHP_EOL;
+
+            return $instance;
+        }
+        catch(PDOException|EntityException $error)
+        {
+            throw $error;
+        }
+    }
+
+    public static function load(PDOStatement $pdoStatement)
+    {
+        $class = get_called_class();
+        $result = $pdoStatement->fetch();
+
+        if($result)
+        {
+            // Création d'une instance de l'entité
+            $entity = new $class();
+
+            // Remplissage des propriétés de l'entité avec les données récupérées
+            foreach($result as $key => $value)
+            {
+                if(property_exists($entity, $key))
+                    $entity->$key = $value;
+            }
+
+            // Retourne l'instance de l'entité remplie
+            return $entity;
+        }
+
+        return false; // Aucune donnée trouvée
+    }
+
+    public static function loadAll(PDOStatement $pdoStatement)
+    {
+        $class = get_called_class();
+        $results = $pdoStatement->fetchAll();
+
+        if($results)
+        {
+            $entities = array();
+            foreach($results as $data)
+            {
+                // Création d'une instance de l'entité
+                $entity = new $class();
+
+                // Remplissage des propriétés de l'entité avec les données récupérées
+                foreach($data as $key => $value)
+                {
+                    if(property_exists($entity, $key))
+                        $entity->$key = $value;
+                }
+
+                $entities[] = $entity;
+            }
+
+            // Retourne les instances remplies
+            return $entities;
+        }
+
+        return false; // Aucune donnée trouvée
+    }
+
+    public function where(string $column, string $condition, $value)
+    {
+        $validConditions = array(
+            '=' => '= ?',
+            '!=' => '!= ?',
+            '<>' => '<> ?',
+            '<' => '< ?',
+            '<=' => '<= ?',
+            '>' => '> ?',
+            '>=' => '>= ?',
+            'IN' => 'IN(?)',
+            'NOT IN' => 'NOT IN(?)',
+            'BETWEEN' => 'BETWEEN ? AND ?'
+        );
+
+        try
+        {
+            if(!isset($validConditions[$condition]))
+                throw new EntityException('Invalid condition.');
+
+            if(!str_contains($this->query, 'WHERE'))
+                $this->query .= 'WHERE ' . $column . ' ' . $validConditions[$condition];
+            elseif(substr($this->query, -1) === '(')
+                $this->query .= PHP_EOL . $column . ' ' . $validConditions[$condition];
+            else
+                $this->query .= PHP_EOL . 'AND ' . $column . ' ' . $validConditions[$condition];
+
+            if(in_array($condition, array('IN', 'NOT IN')) && is_array($value))
+            {
+                $placeholders = implode(',', array_fill(0, count($value), '?'));
+                $this->parameters = array_merge($this->parameters, $value);
+                $this->query = str_replace('?', $placeholders, $this->query);
+            }
+            elseif($condition === 'BETWEEN' && is_array($value))
+                $this->parameters = array_merge($this->parameters, $value);
+            else
+                $this->parameters[] = $value;
+
+            return $this;
+        }
+        catch(PDOException|EntityException $error)
+        {
+            throw $error;
+        }
+    }
 
     // public function orWhere(string $column, string $condition, $value)
     // {
     //     try
     //     {
     //         if(substr($this->query, -1) === '(')
-    //             throw new EntityException('Impossible d\'appeler la méthode orWhere() au début d\'un whereSub()');
+    //             throw new EntityException('Impossible d\'appeler la méthode orWhere() au début d\'un subWhere()');
 
     //         $this->where($column, $condition, $value);
 
@@ -351,7 +504,7 @@ class Entity
     //     }
     // }
 
-    // public function whereSub(string $operator, callable $callback)
+    // public function subWhere(string $operator, callable $callback)
     // {
     //     $this->query .= PHP_EOL . $operator . ' (';
 
