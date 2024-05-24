@@ -1,11 +1,3 @@
-<?php
-
-use App\User;
-
-dd(User::createUser('testupdate', 'testupdate@gmail.com', 'Azerty1234/', 'Azerty1234/'));
-
-?>
-
 <div class="login-led-container">
     <div class="login-form">
         <form action="/user/create" class="row g-2">

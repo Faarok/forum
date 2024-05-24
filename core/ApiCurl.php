@@ -1,10 +1,10 @@
 <?php
 
-namespace App;
+namespace Core;
 
 use Exception;
 use CurlHandle;
-use App\Exception\ApiException;
+use Core\Exception\ApiException;
 
 /**
  * Class légère pour utiliser cURL

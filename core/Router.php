@@ -17,9 +17,15 @@ class Router
         $this->router = new AltoRouter();
     }
 
-    public function get(string $url, string $view, ?string $name = null)
+    public function get(string $url, string $target, ?string $name = null)
     {
-        $this->router->map('GET', $url, $view, $name);
+        $this->router->map('GET', $url, $target, $name);
+        return $this;
+    }
+
+    public function post(string $url, string $target, ?string $name = null)
+    {
+        $this->router->map('POST', $url, $target, $name);
         return $this;
     }
 
@@ -39,11 +45,27 @@ class Router
             return $this;
         }
 
-        $view = $match['target'];
-        ob_start();
-        require $view . '.php';
-        $content = ob_get_clean();
-        require VIEW_PATH . 'layouts' . SLASH . 'default.php';
+        // Extraction du contrôleur et de la méthode
+        $target = $match['target'];
+        list($controller, $method) = explode('@', $target);
+
+        // Appel du contrôleur et de la méthode
+        if(class_exists($controller) && method_exists($controller, $method))
+        {
+            $controllerInstance = new $controller();
+            dd($match);
+            call_user_func_array(array($controllerInstance, $method), $match['params']);
+        }
+        else
+        {
+            // Afficher une erreur 500 si le contrôleur ou la méthode n'existent pas
+            http_response_code(500);
+            ob_start();
+            require(__ROOT__ . 'error.php');
+            $content = ob_get_clean();
+            require VIEW_PATH . 'layouts' . SLASH . 'default.php';
+            return $this;
+        }
 
         return $this;
     }

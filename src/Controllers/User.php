@@ -1,6 +1,6 @@
 <?php
 
-namespace App;
+namespace App\Controllers;
 
 use Core\Entity;
 use Core\Exception\UserException;
@@ -16,6 +16,11 @@ class User extends Entity
         'mail' => array('type' => 'text', 'label' => 'Mail de l\'utilisateur'),
         'password' => array('type' => 'password', 'label' => 'Mot de passe de l\'utilisateur')
     );
+
+    public function signIn()
+    {
+
+    }
 
     public static function createUser(string $username, string $mail, string $password, string $passwordVerify)
     {

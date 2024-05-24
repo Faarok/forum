@@ -26,11 +26,18 @@ if($_ENV['APP_DEBUG'] === 'true')
 
 $router = new Router();
 
+// User
 $router
-    ->get('/migration', __ROOT__ . 'migration' . SLASH . 'migration', 'Migration')
-    ->get('/', VIEW_PATH . 'home', 'Accueil')
-    ->get('/sign-in', VIEW_PATH . 'auth' . SLASH . 'sign-in', 'Se connecter')
-    ->get('/sign-up', VIEW_PATH . 'auth' . SLASH . 'sign-up', 'S\'inscrire')
-    ->get('/blog', VIEW_PATH . 'post' . SLASH . 'index', 'Blog')
-    ->get('/blog/category', VIEW_PATH . 'category' . SLASH . 'show', 'Catégorie')
-    ->run();
+    ->get('/sign-in', 'App\Controllers\User@signIn', 'Se connecter')
+;
+
+$router
+    ->get('/migration', 'App\Controllers\MigrationController@runMigration', 'Migration')
+    ->get('/', 'App\Controllers\HomeController@index', 'Accueil')
+    // ->post('/user/create', 'App\Controllers\UserController@create', 'Créer utilisateur')
+    ->get('/sign-up', 'App\Controllers\AuthController@signUp', 'S\'inscrire')
+    ->get('/blog', 'App\Controllers\PostController@index', 'Blog')
+    ->get('/blog/category', 'App\Controllers\CategoryController@show', 'Catégorie')
+;
+
+$router->run();

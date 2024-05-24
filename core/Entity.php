@@ -190,7 +190,7 @@ class Entity
         return $debugQuery;
     }
 
-    protected function save()
+    public function save()
     {
         try
         {
@@ -429,7 +429,7 @@ class Entity
             return $entities;
         }
 
-        return false; // Aucune donnée trouvée
+        return false;
     }
 
     public function where(string $column, string $condition, $value)
