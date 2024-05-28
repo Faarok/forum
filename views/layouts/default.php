@@ -1,5 +1,7 @@
 <?php
 
+use Core\CallJs;
+
 require_once(__ROOT__ . 'function.php');
 
 ?>
@@ -40,5 +42,12 @@ require_once(__ROOT__ . 'function.php');
     <div>
         <?= $content; ?>
     </div>
+
+    <script src="<?= JS_PATH_URL . 'jquery.min.js'; ?>"></script>
+    <script type="module" src="<?= JS_PATH_URL . 'core.js'; ?>"></script>
+
+    <?php foreach(CallJs::listFiles() as $script): ?>
+        <?= $script; ?>
+    <?php endforeach; ?>
 </body>
 </html>

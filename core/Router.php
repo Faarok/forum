@@ -29,21 +29,17 @@ class Router
         return $this;
     }
 
-    public function run(): self
+    public function run()
     {
+        global $_;
+
         $match = $this->router->match();
 
         // Vérifie si $match['target'] est false (aucune route trouvée)
         if($match === false)
-        {
-            // Afficher une erreur 404
-            http_response_code(404);
-            ob_start();
-            require(__ROOT__ . 'error.php');
-            $content = ob_get_clean();
-            require VIEW_PATH . 'layouts' . SLASH . 'default.php';
-            return $this;
-        }
+            return HttpError::handle(404);
+
+        $params = array_merge($match['params'], $_);
 
         // Extraction du contrôleur et de la méthode
         $target = $match['target'];
@@ -53,19 +49,10 @@ class Router
         if(class_exists($controller) && method_exists($controller, $method))
         {
             $controllerInstance = new $controller();
-            dd($match);
-            call_user_func_array(array($controllerInstance, $method), $match['params']);
+            call_user_func_array(array($controllerInstance, $method), $params);
         }
         else
-        {
-            // Afficher une erreur 500 si le contrôleur ou la méthode n'existent pas
-            http_response_code(500);
-            ob_start();
-            require(__ROOT__ . 'error.php');
-            $content = ob_get_clean();
-            require VIEW_PATH . 'layouts' . SLASH . 'default.php';
-            return $this;
-        }
+            HttpError::handle(500);
 
         return $this;
     }

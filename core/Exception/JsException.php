@@ -4,7 +4,7 @@ namespace Core\Exception;
 
 use Exception;
 
-class ApiException extends Exception
+class JsException extends Exception
 {
 
 }

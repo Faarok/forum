@@ -1,6 +1,5 @@
 <?php
 
-use App\User;
 use Core\Router;
 use Whoops\Run;
 use Dotenv\Dotenv;
@@ -28,16 +27,17 @@ $router = new Router();
 
 // User
 $router
-    ->get('/sign-in', 'App\Controllers\User@signIn', 'Se connecter')
+    ->get('/user/sign-up', 'App\Controllers\User@signUp', 'S\'inscrire')
+    ->post('/user/create-user', 'App\Controllers\User@createUser', 'Création d\'un utilisateur')
 ;
 
-$router
-    ->get('/migration', 'App\Controllers\MigrationController@runMigration', 'Migration')
-    ->get('/', 'App\Controllers\HomeController@index', 'Accueil')
-    // ->post('/user/create', 'App\Controllers\UserController@create', 'Créer utilisateur')
-    ->get('/sign-up', 'App\Controllers\AuthController@signUp', 'S\'inscrire')
-    ->get('/blog', 'App\Controllers\PostController@index', 'Blog')
-    ->get('/blog/category', 'App\Controllers\CategoryController@show', 'Catégorie')
-;
+// $router
+//     ->get('/migration', 'App\Controllers\MigrationController@runMigration', 'Migration')
+//     ->get('/', 'App\Controllers\HomeController@index', 'Accueil')
+//     // ->post('/user/create', 'App\Controllers\UserController@create', 'Créer utilisateur')
+//     ->get('/sign-up', 'App\Controllers\AuthController@signUp', 'S\'inscrire')
+//     ->get('/blog', 'App\Controllers\PostController@index', 'Blog')
+//     ->get('/blog/category', 'App\Controllers\CategoryController@show', 'Catégorie')
+// ;
 
 $router->run();
