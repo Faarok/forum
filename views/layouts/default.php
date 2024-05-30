@@ -11,7 +11,8 @@ require_once(__ROOT__ . 'function.php');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="<?= ROOT_URL . 'css' . SLASH . 'main.css'; ?>">
+    <link rel="stylesheet" href="<?= CSS_PATH_URL . 'toastr.min.css'; ?>">
+    <link rel="stylesheet" href="<?= CSS_PATH_URL . 'main.css'; ?>">
     <title><?= $title ?? 'Mon site'; ?></title>
 </head>
 <body>
@@ -44,6 +45,7 @@ require_once(__ROOT__ . 'function.php');
     </div>
 
     <script src="<?= JS_PATH_URL . 'jquery.min.js'; ?>"></script>
+    <script src="<?= JS_PATH_URL . 'toastr.min.js'; ?>"></script>
     <script type="module" src="<?= JS_PATH_URL . 'core.js'; ?>"></script>
 
     <?php foreach(CallJs::listFiles() as $script): ?>

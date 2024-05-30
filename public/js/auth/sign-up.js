@@ -18,14 +18,9 @@ form.on('submit', function(event) {
             // Redirection ou autre traitement ici si nécessaire
         })
         .fail(function(jqXHR, textStatus, errorThrown) {
-            // Échec
-            if (jqXHR.status === 401) {
-                $('#sign-up-result').text(jqXHR.responseJSON['error_message']);
-            } else {
-                // Gestion d'autres erreurs HTTP non gérées spécifiquement
-                // Exemple : Afficher un message générique
-                $('#sign-up-result').text('Une erreur s\'est produite. Veuillez réessayer plus tard.');
-            }
+            let error = JSON.parse(jqXHR.responseText);
+
+            CoreJs.toastError(error);
         })
     ;
 });

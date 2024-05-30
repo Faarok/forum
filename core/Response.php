@@ -11,11 +11,13 @@ class Response
         exit;
     }
 
-    public static function handleError(int $errorCode, string $message)
+    public static function handleError(int $errorCode, string $message, string $file = null, int $line = null)
     {
         http_response_code($errorCode);
         self::json(array(
-            'error_message' => $message
+            'message' => $message,
+            'file' => $file,
+            'line' => $line
         ));
     }
 
@@ -23,7 +25,7 @@ class Response
     {
         http_response_code($successCode);
         self::json(array(
-            'success_message' => $message
+            'message' => $message
         ));
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use Core\View;
+use Exception;
 use Core\Entity;
 use Core\Response;
 
@@ -26,16 +27,22 @@ class User extends Entity
     public static function createUser(string $username, string $mail, string $password, string $passwordVerify)
     {
         if(!self::validateUsername($username))
-            return Response::handleError(401, 'Nom d\'utilisateur invalide');
+            return Response::handleError(400, 'Nom d\'utilisateur invalide', __FILE__, __LINE__);
+
+        if(!self::checkExistingUsername($username))
+            return Response::handleError(409, 'Nom d\'utilisateur indisponible', __FILE__, __LINE__);
 
         if(!self::validateEmail($mail))
-            return Response::handleError(401, 'Format de l\'adresse mail invalide');
+            return Response::handleError(400, 'Format de l\'adresse mail invalide', __FILE__, __LINE__);
+
+        // if(!self::checkExistingEmail($mail))
+            // return Response::handleError(409, 'Un compte existe déjà pour cette adresse mail');
 
         if(!self::validatePasswordLength($password))
-            return Response::handleError(401, 'Le mot de passe doit contenir entre 8 et 127 caractères');
+            return Response::handleError(400, 'Le mot de passe doit contenir entre 8 et 127 caractères', __FILE__, __LINE__);
 
         if(!self::validatePaswordVerify($password, $passwordVerify))
-            return Response::handleError(401, 'Le mot de passe doit contenir une majuscule, une minuscule, un chiffre ainsi qu\'un caractère spécial.');
+            return Response::handleError(400, 'Le mot de passe doit contenir une majuscule, une minuscule, un chiffre ainsi qu\'un caractère spécial.', __FILE__, __LINE__);
 
         $user = new User();
         $user->username = $username;
@@ -57,6 +64,15 @@ class User extends Entity
     private static function validateUsername(string $username):bool
     {
         return preg_match('/^[a-zA-Z0-9_-]+$/', $username);
+    }
+
+    private static function checkExistingUsername(string $username)
+    {
+        $query = (new User())
+            ->select(array('username'))
+            ->where('username', '=', $username)
+            ->run()
+        ;
     }
 
     /**
