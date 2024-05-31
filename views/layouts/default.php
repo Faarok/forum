@@ -44,8 +44,8 @@ require_once(__ROOT__ . 'function.php');
         <?= $content; ?>
     </div>
 
-    <script src="<?= JS_PATH_URL . 'jquery.min.js'; ?>"></script>
-    <script src="<?= JS_PATH_URL . 'toastr.min.js'; ?>"></script>
+    <script src="<?= JS_PATH_URL . 'node_modules' . SLASH . 'jquery' . SLASH . 'dist' . SLASH . 'jquery.min.js'; ?>"></script>
+    <script src="<?= JS_PATH_URL . 'node_modules' . SLASH . 'toastr' . SLASH . 'build' . SLASH . 'toastr.min.js'; ?>"></script>
     <script type="module" src="<?= JS_PATH_URL . 'core.js'; ?>"></script>
 
     <?php foreach(CallJs::listFiles() as $script): ?>

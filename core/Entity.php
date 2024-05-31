@@ -112,8 +112,13 @@ class Entity
     {
         try
         {
-            foreach ($this->parameters as &$param)
+            foreach($this->parameters as &$param)
+            {
+                if(empty($param))
+                    continue;
+
                 $param = htmlspecialchars($param, ENT_QUOTES, 'UTF-8');
+            }
 
             $this->query .= ';';
             $this->results = $this->db->prepare($this->query);

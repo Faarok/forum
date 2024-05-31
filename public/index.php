@@ -1,7 +1,7 @@
 <?php
 
-use Core\Router;
 use Whoops\Run;
+use Core\Router;
 use Dotenv\Dotenv;
 use Whoops\Handler\PrettyPageHandler;
 
@@ -18,8 +18,12 @@ ini_set('smtp_port', $_ENV['SMTP_PORT']);
 
 if($_ENV['APP_DEBUG'] === 'true')
 {
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+
     $whoops = new Run();
-    $whoops->pushHandler(new PrettyPageHandler);
+    $whoops->pushHandler(new PrettyPageHandler());
     $whoops->register();
 }
 
@@ -27,8 +31,9 @@ $router = new Router();
 
 // User
 $router
-    ->get('/user/sign-up', 'App\Controllers\User@signUp', 'S\'inscrire')
-    ->post('/user/create-user', 'App\Controllers\User@createUser', 'Création d\'un utilisateur')
+    ->get('/user/sign-up', 'App\Controllers\UserController@signUp', 'S\'inscrire')
+    ->post('/user/create-user', 'App\Controllers\UserController@createUser', 'Création d\'un utilisateur')
+    ->get('/test', 'App\Controllers\UserController@testMail')
 ;
 
 // $router

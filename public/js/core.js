@@ -7,16 +7,34 @@ const CoreJs = {
             dataType: 'json'
         });
     },
-    toastError: (errorJson, timeOut = 5000) => {
-        return toastr.error(`
-                <div>
-                    <h4>Error: ${errorJson.message}</h4>
-                    <p>File: ${errorJson.file}</p>
-                    <p>Line: ${errorJson.line}</p>
-                </div>
-            `,
-            'Erreur AJAX', {timeOut: timeOut}
-        );
+    toast: (type, jsonData, timeOut = 5000) => {
+        let html = '';
+        let title = '';
+        switch(type)
+        {
+            case 'error':
+                title = 'Erreur :';
+                html = `
+                    <div>
+                        <h4>${title}</h4>
+                        <p>Error: ${jsonData.message}</p>
+                        <p>File: ${jsonData.file}</p>
+                        <p>Line: ${jsonData.line}</p>
+                    </div>
+                `;
+                break;
+            case 'success':
+                title = 'Succès !';
+                html = `
+                    <div>
+                        <h4>${title}</h4>
+                        <p>${jsonData.message}</p>
+                    </div>
+                `;
+                break;
+        }
+
+        return toastr[type](html, {timeOut: timeOut});
     }
 }
 

@@ -7,20 +7,17 @@ form.on('submit', function(event) {
 
     // Récupère les valeurs des champs du formulaire
     let data = form.serializeArray();
-
     let request = CoreJs.ajax('POST', '/user/create-user', data);
-
 
     request
         .done(function(response) {
-            // $('#sign-up-result').text('Inscription réussie !');
-            $('#sign-up-result').text(response.success_message);
-            // Redirection ou autre traitement ici si nécessaire
+            CoreJs.toast('success', response);
         })
-        .fail(function(jqXHR, textStatus, errorThrown) {
-            let error = JSON.parse(jqXHR.responseText);
-
-            CoreJs.toastError(error);
+        .fail(function(jqXHR) {
+            if(jqXHR.status === 500)
+                $('#sign-up-result').html(jqXHR.responseText);
+            else
+                CoreJs.toastError(JSON.parse(jqXHR.responseText));
         })
     ;
 });
