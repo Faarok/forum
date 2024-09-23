@@ -18,6 +18,3 @@ node_modules
 .htaccess
 constant.php
 *.sql
-
-# OTHER
-TODO.md
